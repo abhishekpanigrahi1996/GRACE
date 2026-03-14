@@ -7,6 +7,7 @@ MODEL_PATH=models/Qwen2.5-3B-Instruct
 INPUT_PATH=data/gsm8k/train.jsonl
 OUTPUT_PATH=data/gsm8k_synthetic/Qwen2.5-3B-Instruct.jsonl
 TEMPERATURE=0.6
+RESPONSES=16
 
 
 python "${PYTHON_SCRIPT}" \
@@ -14,5 +15,6 @@ python "${PYTHON_SCRIPT}" \
     --input_file ${INPUT_PATH} \
     --output_file ${OUTPUT_PATH} \
     --temperature ${TEMPERATURE} \
-    --tensor_parallel_size ${NUM_VISIBLE_DEVICES}
+    --responses_per_question ${RESPONSES} \
+    --tensor_parallel_size ${NUM_VISIBLE_DEVICES} 
 
