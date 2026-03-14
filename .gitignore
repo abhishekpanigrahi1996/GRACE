@@ -3,3 +3,4 @@ output
 data/*_synthetic
 evals
 grace_data/
+*.pyc
