@@ -17,7 +17,7 @@ class ModelArguments:
     )
     
     cache_dir: Optional[str] = field(
-        default='/scratch/gpfs/ap34/hf_models',
+        default='hf_models',
         metadata={"help": "cache dir"}
     )
     pad_token_id: Optional[int] = field(
@@ -39,7 +39,7 @@ class TrainingArguments(TA):
     )
 
     project_name: Optional[str] = field(
-        default='context_enhanced_RL',
+        default='GRACE',
         metadata={"help": "Name of the W&B project"}
     )
 
@@ -74,7 +74,7 @@ class DataArguments:
     )
 
     max_sequence_length: Optional[int] = field(
-        default=16384,
+        default=4096,
         metadata={"help": "Context length"}
     )
 

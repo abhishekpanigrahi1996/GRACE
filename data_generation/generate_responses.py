@@ -106,7 +106,7 @@ def main():
         prompts.append(prompt_text)
 
     sampling_params = SamplingParams(
-        n=args.responses_per_question,   # generate 3 outputs per prompt
+        n=args.responses_per_question,   
         temperature=args.temperature,
         top_p=args.top_p,
         max_tokens=args.max_tokens,
