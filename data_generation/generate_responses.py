@@ -77,6 +77,7 @@ def main():
     parser.add_argument("--top_p", type=float, default=1.0)
     parser.add_argument("--tensor_parallel_size", type=int, default=2)
     parser.add_argument("--gpu_memory_utilization", type=float, default=0.9)
+    parser.add_argument("--template", type=str, default=None, help="Template should contain one field - problem")
     parser.add_argument("--responses_per_question", type=int, default=16)
     args = parser.parse_args()
 
@@ -96,13 +97,14 @@ def main():
         question = extract_prompt(item, args.prompt_key)
         messages = build_messages(question, args.system_prompt)
 
-        # Qwen chat formatting
-        prompt_text = tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
-            enable_thinking=True
-        )
+        if args.template is not None:
+            prompt_text = args.template.format(problem=messages[0]['content'])
+        else:
+            prompt_text = tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True
+            )
         prompts.append(prompt_text)
 
     sampling_params = SamplingParams(

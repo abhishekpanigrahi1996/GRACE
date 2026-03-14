@@ -1,7 +1,7 @@
 import argparse
 import json
 import os
-import pickle
+from datasets import Dataset
 from typing import Any, Dict, List
 import random
 from transformers import AutoTokenizer
@@ -21,7 +21,7 @@ def parse_args():
         "--output-path",
         type=str,
         required=True,
-        help="Path to output pickle file.",
+        help="Path to output hf file.",
     )
     parser.add_argument(
         "--tokenizer-path",
@@ -38,7 +38,7 @@ def parse_args():
     parser.add_argument(
         "--ignore-index",
         type=int,
-        default=-1,
+        default=-100,
         help="Label value for non-solution tokens. Use -100 for HF training.",
     )
     parser.add_argument(
@@ -94,6 +94,19 @@ def load_data(path: str) -> List[Dict[str, Any]]:
         raise ValueError("JSON file must contain a list of examples.")
 
     raise ValueError("Input file must end with .json or .jsonl")
+
+
+def extract_prompt(item: Dict[str, Any], prompt_key: str) -> str:
+    if prompt_key in item:
+        return str(item[prompt_key])
+
+    # fallback keys
+    for key in ["question", "prompt", "input", "query", "setup"]:
+        if key in item:
+            return str(item[key])
+    
+    raise KeyError(f"Could not find prompt field in item. Tried '{prompt_key}', question, prompt, input, query.")
+
 
 
 def find_responses(example: Dict[str, Any], responses_key: str = None, response_key: str = None) -> List[str]:
@@ -163,10 +176,8 @@ def main():
         data = data[:args.subsample_responses]
 
     for example_idx, example in enumerate(data):
-        if args.problem_key not in example:
-            raise KeyError(f"Missing problem key '{args.problem_key}' in example {example_idx}")
 
-        problem = str(example[args.problem_key])
+        problem = extract_prompt(example, args.problem_key)
         responses = find_responses(
             example,
             responses_key=args.responses_key,
@@ -194,9 +205,10 @@ def main():
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
 
-    with open(args.output_path, "wb") as f:
-        pickle.dump(processed, f)
-
+    
+    
+    dataset = Dataset.from_list(processed)
+    dataset.save_to_disk(args.output_path)
     print(f"Saved {len(processed)} examples to: {args.output_path}")
 
     if processed:

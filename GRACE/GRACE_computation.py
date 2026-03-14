@@ -45,37 +45,7 @@ def parse_args():
         default=1e-3,
         help="Smoothing coefficient for eigenvalues.",
     )
-    parser.add_argument(
-        "--smooth-cond",
-        action="store_true",
-        help="Smooth eigenvalues toward max eigenvalue.",
-    )
-    parser.add_argument(
-        "--smooth-max-by-sum",
-        action="store_true",
-        help="Use max-by-sum smoothing.",
-    )
-    parser.add_argument(
-        "--smooth-erank",
-        action="store_true",
-        help="Use effective-rank-based smoothing.",
-    )
-    parser.add_argument(
-        "--normalize-train",
-        action="store_true",
-        help="L2-normalize train gradients before kernel computation.",
-    )
-    parser.add_argument(
-        "--normalize-test",
-        action="store_true",
-        help="L2-normalize test gradients before kernel computation.",
-    )
-    parser.add_argument(
-        "--save-path",
-        type=str,
-        default=None,
-        help="Optional path to save GRACE result as pickle.",
-    )
+
 
     return parser.parse_args()
 
@@ -100,28 +70,8 @@ def _smooth_eigenvalues(
 ) -> np.ndarray:
     w = np.clip(w, eps, None)
 
-    if smooth_cond:
-        w_smoothed = (1.0 - smooth_coeff) * w + smooth_coeff * w.max()
-
-    elif smooth_max_by_sum:
-        alpha = 1.0 - np.sum(w) / (len(w) * w.max())
-        alpha = np.clip(alpha, 0.0, 1.0)
-        w_smoothed = alpha * w + (1.0 - alpha) * w.max()
-
-    elif smooth_erank:
-        w_normed = w / np.sum(w)
-        w_normed = np.clip(w_normed, eps, None)
-        entropy = -np.sum(w_normed * np.log(w_normed))
-        erank_relative = entropy / np.log(len(w))
-        cutoff_idx = int(len(w) * erank_relative)
-        cutoff_idx = np.clip(cutoff_idx, 0, len(w) - 1)
-
-        w_smoothed = w.copy()
-        w_smoothed[:cutoff_idx] = np.maximum(w_smoothed[:cutoff_idx], w_smoothed[cutoff_idx])
-
-    else:
-        mean_eig = np.sum(w) / len(w)
-        w_smoothed = (1.0 - smooth_coeff) * w + smooth_coeff * mean_eig
+    mean_eig = np.sum(w) / len(w)
+    w_smoothed = (1.0 - smooth_coeff) * w + smooth_coeff * mean_eig
 
     return np.clip(w_smoothed, eps, None)
 
@@ -238,10 +188,6 @@ def load_gradients(path: str) -> np.ndarray:
 def main():
     args = parse_args()
 
-    if sum([args.smooth_cond, args.smooth_max_by_sum, args.smooth_erank]) > 1:
-        raise ValueError(
-            "At most one of --smooth-cond, --smooth-max-by-sum, or --smooth-erank can be set."
-        )
 
     print(f"Loading gradients from: {args.gradients_path}")
     gradients = load_gradients(args.gradients_path)
@@ -254,40 +200,12 @@ def main():
         test_fraction=args.test_fraction,
         n_splits=args.n_splits,
         smooth_coeff=args.smooth_coeff,
-        smooth_cond=args.smooth_cond,
-        smooth_max_by_sum=args.smooth_max_by_sum,
-        smooth_erank=args.smooth_erank,
-        normalize_train=args.normalize_train,
-        normalize_test=args.normalize_test,
+        normalize_train=True,
+        normalize_test=False,
     )
 
     print(f"GRACE score: {grace_score:.10f}")
 
-    if args.save_path is not None:
-        output_dir = os.path.dirname(args.save_path)
-        if output_dir:
-            os.makedirs(output_dir, exist_ok=True)
-
-        payload = {
-            "gradients_path": args.gradients_path,
-            "grace_score": grace_score,
-            "dim": args.dim,
-            "n_gen_per_prompt": args.n_gen_per_prompt,
-            "test_fraction": args.test_fraction,
-            "n_splits": args.n_splits,
-            "smooth_coeff": args.smooth_coeff,
-            "smooth_cond": args.smooth_cond,
-            "smooth_max_by_sum": args.smooth_max_by_sum,
-            "smooth_erank": args.smooth_erank,
-            "normalize_train": args.normalize_train,
-            "normalize_test": args.normalize_test,
-        }
-        
-
-        with open(args.save_path, "wb") as f:
-            pickle.dump(payload, f)
-
-        print(f"Saved result to: {args.save_path}")
 
 
 if __name__ == "__main__":

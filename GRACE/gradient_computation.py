@@ -4,8 +4,7 @@ import os
 import pickle
 
 import torch
-from datasets import Dataset
-from peft import LoraConfig, get_peft_model
+from datasets import Dataset, load_from_disk
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM
 from trak.projectors import CudaProjector, ProjectionType
@@ -19,7 +18,7 @@ def parse_args():
         description="Compute per-example gradients (optionally LoRA-only), project them with a JL projector, and save them."
     )
     parser.add_argument(
-        "--student-pth",
+        "--model",
         type=str,
         default="models/Llama-3.2-3B-Instruct",
         help="Path to the student model.",
@@ -27,8 +26,8 @@ def parse_args():
     parser.add_argument(
         "--data-path",
         type=str,
-        default="data/temp0.6_val.jsonl",
-        help="Path to input JSONL data.",
+        default=None,
+        help="Path to input hf data file",
     )
     parser.add_argument(
         "--output-path",
@@ -108,6 +107,8 @@ def build_model(student_pth: str, device: str, use_lora: bool, proj_dim: int, dt
         ).to(device)
 
     if use_lora:
+        from peft import LoraConfig, get_peft_model
+
         lora_config = LoraConfig(
             r=16,
             lora_alpha=32,
@@ -180,12 +181,12 @@ def main():
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
 
-    print(f"Loading model from: {args.student_pth}")
+    print(f"Loading model from: {args.model}")
     print(f"Using LoRA: {args.use_lora}")
     print(f"Projection dim: {args.proj_dim}")
 
     model, gradientproj, normalize_factor, grad_dim = build_model(
-        student_pth=args.student_pth,
+        student_pth=args.model,
         device=args.device,
         use_lora=args.use_lora,
         proj_dim=args.proj_dim,
@@ -196,7 +197,7 @@ def main():
     print(f"Gradient dimension before projection: {grad_dim}")
 
     print(f"Loading data from: {args.data_path}")
-    data = load_jsonl_as_dataset(args.data_path)
+    data = load_from_disk(args.data_path)
     print(f"Processing {len(data)} examples")
 
     all_projected_grads = []

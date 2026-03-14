@@ -142,6 +142,7 @@ def evaluate_example(
     is_close: bool,
 ) -> Dict[str, Any]:
     reference = get_reference_answer(example, answer_key)
+    reference = extract_prediction(text=reference, dataset_type=dataset_type, use_last_number=use_last_number,)
     responses = get_responses(example, responses_key)
 
     extracted_predictions = []
@@ -226,14 +227,7 @@ def main():
                 f"Example {idx} has {result['num_responses']} responses, "
                 f"expected {args.expected_num_responses}"
             )
-
-        enriched = {
-            "example_index": idx,
-            args.problem_key: example.get(args.problem_key, None),
-            args.answer_key: example.get(args.answer_key, None),
-            **result,
-        }
-        detailed_results.append(enriched)
+        detailed_results += [result]
 
     summary = summarize_results(detailed_results)
 
@@ -244,21 +238,6 @@ def main():
     print(f"Avg pass@k              : {summary['avg_pass_at_k']:.6f}")
     print(f"Avg #correct / question : {summary['avg_num_correct']:.6f}")
 
-    if args.output_path is not None:
-        output_dir = os.path.dirname(args.output_path)
-        if output_dir:
-            os.makedirs(output_dir, exist_ok=True)
-
-        payload = {
-            "summary": summary,
-            "results": detailed_results,
-            "args": vars(args),
-        }
-
-        with open(args.output_path, "wb") as f:
-            pickle.dump(payload, f)
-
-        print(f"\nSaved detailed results to: {args.output_path}")
 
 
 if __name__ == "__main__":
