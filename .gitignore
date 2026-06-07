@@ -4,3 +4,4 @@ data/*_synthetic
 evals
 grace_data/
 *.pyc
+*.tar.gz

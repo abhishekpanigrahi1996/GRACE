@@ -173,7 +173,7 @@ def main():
         rng = random.Random(42)
         data = data[:]  
         rng.shuffle(data)
-        data = data[:args.subsample_responses]
+        data = data[:args.subsample_questions]
 
     for example_idx, example in enumerate(data):
 
